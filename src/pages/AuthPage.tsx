@@ -11,6 +11,7 @@ import {
 	Building,
 	AlertTriangle,
 	CheckCircle,
+	ChevronDown,
 } from "lucide-react";
 import { auth, supabase, romanianCities } from "../lib/supabase";
 import NetworkErrorHandler from "../components/NetworkErrorHandler";
