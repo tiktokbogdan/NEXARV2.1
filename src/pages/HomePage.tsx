@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Filter, MapPin, Calendar, Gauge, ChevronLeft, ChevronRight, Settings, Fuel, User, X, SlidersHorizontal, Building, RefreshCw, Clock, Tag } from 'lucide-react';
+import { Search, Filter, MapPin, Calendar, Gauge, ChevronLeft, ChevronRight, Settings, Fuel, User, X, SlidersHorizontal, Building, RefreshCw, Clock, Tag, Check } from 'lucide-react';
 import { listings, supabase } from '../lib/supabase';
 import NetworkErrorHandler from '../components/NetworkErrorHandler';
 
