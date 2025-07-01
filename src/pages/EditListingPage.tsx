@@ -4,6 +4,7 @@ import { X, Plus, Check, AlertTriangle, Camera, ArrowLeft, ChevronDown, Trash2 }
 import { listings, isAuthenticated, supabase, romanianCities, admin } from '../lib/supabase';
 import SuccessModal from '../components/SuccessModal';
 import FixSupabaseButton from '../components/FixSupabaseButton';
+import NetworkErrorHandler from '../components/NetworkErrorHandler';
 
 const EditListingPage = () => {
   const { id } = useParams();
@@ -19,6 +20,7 @@ const EditListingPage = () => {
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [filteredCities, setFilteredCities] = useState<string[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [networkError, setNetworkError] = useState<any>(null);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -48,6 +50,7 @@ const EditListingPage = () => {
   const loadListing = async () => {
     try {
       setIsLoading(true);
+      setNetworkError(null);
       
       // Verificăm dacă utilizatorul este admin
       const isAdminUser = await admin.isAdmin();
@@ -70,9 +73,19 @@ const EditListingPage = () => {
         .eq('id', id)
         .single();
 
-      if (error || !listingData) {
-        alert('Anunțul nu a fost găsit');
-        navigate('/profil');
+      if (error) {
+        console.error("Error loading listing:", error);
+        if (error.message?.includes('fetch') || error.message?.includes('network')) {
+          setNetworkError(error);
+          return;
+        }
+        
+        setErrors({ general: "Anunțul nu a fost găsit" });
+        return;
+      }
+
+      if (!listingData) {
+        setErrors({ general: "Anunțul nu a fost găsit" });
         return;
       }
 
@@ -86,8 +99,7 @@ const EditListingPage = () => {
           .single();
 
         if (!profile || profile.id !== listingData.seller_id) {
-          alert('Nu poți edita acest anunț');
-          navigate('/profil');
+          setErrors({ general: "Nu ai permisiunea să editezi acest anunț" });
           return;
         }
       }
@@ -122,9 +134,13 @@ const EditListingPage = () => {
         status: listingData.status || 'pending'
       });
 
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error:', err);
-      navigate('/profil');
+      if (err.message?.includes('fetch') || err.message?.includes('network')) {
+        setNetworkError(err);
+      } else {
+        setErrors({ general: "A apărut o eroare la încărcarea anunțului" });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -374,6 +390,7 @@ const EditListingPage = () => {
     if (!validateForm()) return;
     
     setIsSubmitting(true);
+    setNetworkError(null);
     
     try {
       // Pregătim datele pentru actualizare
@@ -407,6 +424,10 @@ const EditListingPage = () => {
       );
       
       if (error) {
+        if (error.message?.includes('fetch') || error.message?.includes('network')) {
+          setNetworkError(error);
+          return;
+        }
         throw error;
       }
       
@@ -419,6 +440,20 @@ const EditListingPage = () => {
       setIsSubmitting(false);
     }
   };
+
+  // Network error handler
+  if (networkError) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <NetworkErrorHandler 
+            error={networkError} 
+            onRetry={loadListing} 
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -839,7 +874,6 @@ const EditListingPage = () => {
                 {images.map((image, index) => (
                   <div key={index} className="relative group">
                     <img
-                    loading="lazy"
                       src={image}
                       alt={`Upload ${index + 1}`}
                       className="w-full h-48 object-cover rounded-lg"

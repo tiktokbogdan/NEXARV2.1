@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-// If you still get "Cannot find module 'lucide-react'" after installing, try this workaround:
 import { X, Plus, Check, AlertTriangle, Camera } from "lucide-react";
-// If the error persists, ensure you have installed lucide-react with:
-// npm install lucide-react
-// and that your node_modules are not excluded by your tsconfig.json or IDE.
 import {
 	listings,
 	isAuthenticated,
@@ -13,6 +9,7 @@ import {
 } from "../lib/supabase";
 import SuccessModal from "../components/SuccessModal";
 import FixSupabaseButton from "../components/FixSupabaseButton";
+import NetworkErrorHandler from "../components/NetworkErrorHandler";
 
 const CreateListingPage = () => {
 	const [currentStep, setCurrentStep] = useState(1);
@@ -24,6 +21,7 @@ const CreateListingPage = () => {
 	const [isLoadingProfile, setIsLoadingProfile] = useState(true);
 	const [showSuccessModal, setShowSuccessModal] = useState(false);
 	const [createdListingId, setCreatedListingId] = useState<string | null>(null);
+	const [networkError, setNetworkError] = useState<any>(null);
 	const navigate = useNavigate();
 
 	const [formData, setFormData] = useState({
@@ -54,6 +52,7 @@ const CreateListingPage = () => {
 	const checkAuthAndLoadProfile = async () => {
 		try {
 			setIsLoadingProfile(true);
+			setNetworkError(null);
 
 			const isLoggedIn = await isAuthenticated();
 			if (!isLoggedIn) {
@@ -79,6 +78,13 @@ const CreateListingPage = () => {
 
 			if (profileError) {
 				console.error("Error loading profile:", profileError);
+				
+				// Check if it's a network error
+				if (profileError.message?.includes('fetch') || profileError.message?.includes('network')) {
+					setNetworkError(profileError);
+					return;
+				}
+				
 				// If profile doesn't exist, redirect to profile page to create it
 				navigate("/profil");
 				return;
@@ -95,9 +101,13 @@ const CreateListingPage = () => {
 					location: "", // Reset location to empty string instead of pre-filling
 				}));
 			}
-		} catch (error) {
+		} catch (error: any) {
 			console.error("Error checking auth and loading profile:", error);
-			navigate("/auth");
+			if (error.message?.includes('fetch') || error.message?.includes('network')) {
+				setNetworkError(error);
+			} else {
+				navigate("/auth");
+			}
 		} finally {
 			setIsLoadingProfile(false);
 		}
@@ -404,6 +414,7 @@ const CreateListingPage = () => {
 		if (!validateStep(4)) return;
 
 		setIsSubmitting(true);
+		setNetworkError(null);
 
 		try {
 			if (!userProfile) {
@@ -455,7 +466,12 @@ const CreateListingPage = () => {
 
 			if (error) {
 				console.error("❌ Error creating listing:", error);
-				throw new Error(error.message || "Eroare la crearea anunțului");
+				if (error.message?.includes('fetch') || error.message?.includes('network')) {
+					setNetworkError(error);
+				} else {
+					throw new Error(error.message || "Eroare la crearea anunțului");
+				}
+				return;
 			}
 
 			console.log("✅ Listing created successfully:", data);
@@ -467,11 +483,15 @@ const CreateListingPage = () => {
 			setShowSuccessModal(true);
 		} catch (error: any) {
 			console.error("💥 Error creating listing:", error);
-			setErrors({
-				submit:
-					error.message ||
-					"A apărut o eroare la publicarea anunțului. Te rog încearcă din nou.",
-			});
+			if (error.message?.includes('fetch') || error.message?.includes('network')) {
+				setNetworkError(error);
+			} else {
+				setErrors({
+					submit:
+						error.message ||
+						"A apărut o eroare la publicarea anunțului. Te rog încearcă din nou.",
+				});
+			}
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -492,6 +512,20 @@ const CreateListingPage = () => {
 			navigate(`/anunt/${createdListingId}`);
 		}
 	};
+
+	// Network error handler
+	if (networkError) {
+		return (
+			<div className="min-h-screen bg-gray-50 py-8">
+				<div className="max-w-4xl mx-auto px-4">
+					<NetworkErrorHandler 
+						error={networkError} 
+						onRetry={checkAuthAndLoadProfile} 
+					/>
+				</div>
+			</div>
+		);
+	}
 
 	// Loading state
 	if (isLoadingProfile) {
@@ -961,7 +995,6 @@ const CreateListingPage = () => {
 								{images.map((image, index) => (
 									<div key={index} className="relative group">
 										<img
-										loading="lazy"
 											src={image}
 											alt={`Upload ${index + 1}`}
 											className="w-full h-48 object-cover rounded-lg"

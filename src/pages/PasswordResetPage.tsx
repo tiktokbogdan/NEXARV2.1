@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Lock, Eye, EyeOff, CheckCircle, AlertTriangle, Home, LogIn } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import NetworkErrorHandler from '../components/NetworkErrorHandler';
 
 const PasswordResetPage = () => {
   const [password, setPassword] = useState('');
@@ -12,6 +13,7 @@ const PasswordResetPage = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [networkError, setNetworkError] = useState<any>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -59,6 +61,7 @@ const PasswordResetPage = () => {
     try {
       setIsResetting(true);
       setError(null);
+      setNetworkError(null);
       
       // Obținem token-ul din URL
       const params = new URLSearchParams(location.search);
@@ -77,6 +80,10 @@ const PasswordResetPage = () => {
       
       if (error) {
         console.error('Error resetting password:', error);
+        if (error.message?.includes('fetch') || error.message?.includes('network')) {
+          setNetworkError(error);
+          return;
+        }
         setError(error.message || 'A apărut o eroare la resetarea parolei. Te rugăm să încerci din nou.');
         setIsResetting(false);
         return;
@@ -91,12 +98,30 @@ const PasswordResetPage = () => {
         navigate('/auth');
       }, 3000);
       
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error in handleResetPassword:', err);
-      setError('A apărut o eroare neașteptată. Te rugăm să încerci din nou sau să contactezi suportul.');
+      if (err.message?.includes('fetch') || err.message?.includes('network')) {
+        setNetworkError(err);
+      } else {
+        setError('A apărut o eroare neașteptată. Te rugăm să încerci din nou sau să contactezi suportul.');
+      }
       setIsResetting(false);
     }
   };
+
+  // Network error handler
+  if (networkError) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-md mx-auto px-4">
+          <NetworkErrorHandler 
+            error={networkError} 
+            onRetry={() => window.location.reload()} 
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -105,7 +130,6 @@ const PasswordResetPage = () => {
           {/* Logo */}
           <div className="flex justify-center mb-6">
             <img 
-            loading="lazy"
               src="/Nexar - logo_black & red.png" 
               alt="Nexar Logo" 
               className="h-24 w-auto"

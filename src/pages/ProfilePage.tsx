@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 
 import {
@@ -31,6 +31,7 @@ import {
 	listings,
 } from "../lib/supabase";
 import FixSupabaseButton from "../components/FixSupabaseButton";
+import NetworkErrorHandler from "../components/NetworkErrorHandler";
 
 const ProfilePage = () => {
 	const { id } = useParams();
@@ -59,16 +60,19 @@ const ProfilePage = () => {
 	const [passwordChangeSuccess, setPasswordChangeSuccess] = useState(false);
 	const [showLocationDropdown, setShowLocationDropdown] = useState(false);
 	const [filteredCities, setFilteredCities] = useState<string[]>([]);
+	const [networkError, setNetworkError] = useState<any>(null);
 
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	useEffect(() => {
 		loadProfile();
 	}, [id]);
+	
 	const loadProfile = async () => {
 		try {
-			setIsLoading(true); // 🔁 Începe încărcarea
+			setIsLoading(true);
 			setError(null);
+			setNetworkError(null);
 
 			const {
 				data: { user: currentUser },
@@ -91,6 +95,10 @@ const ProfilePage = () => {
 
 			if (profileError) {
 				console.error("❌ Eroare la încărcarea profilului:", profileError);
+				if (profileError.message?.includes('fetch') || profileError.message?.includes('network')) {
+					setNetworkError(profileError);
+					return;
+				}
 				setError("Profilul nu a fost găsit.");
 				return;
 			}
@@ -100,11 +108,15 @@ const ProfilePage = () => {
 			setEditedProfile(profileData);
 
 			await loadUserListings(profileData.id);
-		} catch (err) {
+		} catch (err: any) {
 			console.error("💥 Eroare la încărcarea profilului:", err);
-			setError("A apărut o eroare la încărcarea profilului.");
+			if (err.message?.includes('fetch') || err.message?.includes('network')) {
+				setNetworkError(err);
+			} else {
+				setError("A apărut o eroare la încărcarea profilului.");
+			}
 		} finally {
-			setIsLoading(false); // ✅ Asta lipsea! Setează false când s-a terminat.
+			setIsLoading(false);
 			console.log("✅ Profilul a fost procesat complet.");
 		}
 	};
@@ -207,6 +219,7 @@ const ProfilePage = () => {
 			if (!profile || !isCurrentUser) return;
 
 			setIsSubmitting(true);
+			setNetworkError(null);
 
 			// Validare
 			if (!editedProfile.name.trim()) {
@@ -232,6 +245,11 @@ const ProfilePage = () => {
 
 			if (error) {
 				console.error("Error updating profile:", error);
+				if (error.message?.includes('fetch') || error.message?.includes('network')) {
+					setNetworkError(error);
+					setIsSubmitting(false);
+					return;
+				}
 				alert("Eroare la actualizarea profilului");
 				setIsSubmitting(false);
 				return;
@@ -289,9 +307,13 @@ const ProfilePage = () => {
 			window.scrollTo(0, 0);
 
 			alert("Profilul a fost actualizat cu succes!");
-		} catch (err) {
+		} catch (err: any) {
 			console.error("Error saving profile:", err);
-			alert("A apărut o eroare la salvarea profilului");
+			if (err.message?.includes('fetch') || err.message?.includes('network')) {
+				setNetworkError(err);
+			} else {
+				alert("A apărut o eroare la salvarea profilului");
+			}
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -434,6 +456,20 @@ const ProfilePage = () => {
 	const handleViewListing = (listingId: string) => {
 		navigate(`/anunt/${listingId}`);
 	};
+
+	// Network error handler
+	if (networkError) {
+		return (
+			<div className="min-h-screen bg-gray-50 py-8">
+				<div className="max-w-4xl mx-auto px-4">
+					<NetworkErrorHandler 
+						error={networkError} 
+						onRetry={loadProfile} 
+					/>
+				</div>
+			</div>
+		);
+	}
 
 	// Loading state
 	if (isLoading) {

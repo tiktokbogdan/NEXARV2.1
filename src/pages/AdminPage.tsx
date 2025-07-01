@@ -20,6 +20,7 @@ import {
 	XCircle,
 } from "lucide-react";
 import { admin, supabase } from "../lib/supabase";
+import NetworkErrorHandler from "../components/NetworkErrorHandler";
 
 const AdminPage = () => {
 	const [activeTab, setActiveTab] = useState("listings");
@@ -33,6 +34,7 @@ const AdminPage = () => {
 	const [isProcessing, setIsProcessing] = useState<{ [key: string]: boolean }>(
 		{},
 	);
+	const [networkError, setNetworkError] = useState<any>(null);
 	const navigate = useNavigate();
 
 	useEffect(() => {
@@ -43,6 +45,7 @@ const AdminPage = () => {
 		try {
 			setIsLoading(true);
 			setError(null);
+			setNetworkError(null);
 
 			// Verifică dacă utilizatorul este admin
 			const isAdminUser = await admin.isAdmin();
@@ -62,9 +65,13 @@ const AdminPage = () => {
 			} else if (activeTab === "users") {
 				await loadUsers();
 			}
-		} catch (err) {
+		} catch (err: any) {
 			console.error("Error checking admin status:", err);
-			setError("A apărut o eroare la verificarea statusului de administrator.");
+			if (err.message?.includes('fetch') || err.message?.includes('network')) {
+				setNetworkError(err);
+			} else {
+				setError("A apărut o eroare la verificarea statusului de administrator.");
+			}
 		} finally {
 			setIsLoading(false);
 		}
@@ -74,6 +81,7 @@ const AdminPage = () => {
 		try {
 			setIsLoading(true);
 			setError(null);
+			setNetworkError(null);
 
 			// Folosim query direct pentru a obține TOATE anunțurile, inclusiv cele în așteptare
 			const { data, error } = await supabase
@@ -93,15 +101,23 @@ const AdminPage = () => {
 
 			if (error) {
 				console.error("Error loading listings:", error);
-				setError("Nu s-au putut încărca anunțurile.");
+				if (error.message?.includes('fetch') || error.message?.includes('network')) {
+					setNetworkError(error);
+				} else {
+					setError("Nu s-au putut încărca anunțurile.");
+				}
 				return;
 			}
 
 			console.log("Loaded listings:", data?.length || 0, data);
 			setListings(data || []);
-		} catch (err) {
+		} catch (err: any) {
 			console.error("Error loading listings:", err);
-			setError("A apărut o eroare la încărcarea anunțurilor.");
+			if (err.message?.includes('fetch') || err.message?.includes('network')) {
+				setNetworkError(err);
+			} else {
+				setError("A apărut o eroare la încărcarea anunțurilor.");
+			}
 		} finally {
 			setIsLoading(false);
 		}
@@ -111,19 +127,28 @@ const AdminPage = () => {
 		try {
 			setIsLoading(true);
 			setError(null);
+			setNetworkError(null);
 
 			const { data, error } = await admin.getAllUsers();
 
 			if (error) {
 				console.error("Error loading users:", error);
-				setError("Nu s-au putut încărca utilizatorii.");
+				if (error.message?.includes('fetch') || error.message?.includes('network')) {
+					setNetworkError(error);
+				} else {
+					setError("Nu s-au putut încărca utilizatorii.");
+				}
 				return;
 			}
 
 			setUsers(data || []);
-		} catch (err) {
+		} catch (err: any) {
 			console.error("Error loading users:", err);
-			setError("A apărut o eroare la încărcarea utilizatorilor.");
+			if (err.message?.includes('fetch') || err.message?.includes('network')) {
+				setNetworkError(err);
+			} else {
+				setError("A apărut o eroare la încărcarea utilizatorilor.");
+			}
 		} finally {
 			setIsLoading(false);
 		}
@@ -132,6 +157,7 @@ const AdminPage = () => {
 	const handleTabChange = async (tab: string) => {
 		setActiveTab(tab);
 		setSearchQuery("");
+		setStatusFilter("all");
 
 		if (tab === "listings" && listings.length === 0) {
 			await loadAllListings();
@@ -253,43 +279,11 @@ const AdminPage = () => {
 		try {
 			setIsProcessing((prev) => ({ ...prev, [userId]: true }));
 
-			// 1. Obținem profilul utilizatorului
-			const { data: profile, error: profileError } = await supabase
-				.from("profiles")
-				.select("id")
-				.eq("user_id", userId)
-				.single();
+			const { error } = await admin.deleteUser(userId);
 
-			if (profileError || !profile) {
-				console.error("Error fetching user profile:", profileError);
-				alert("Eroare la găsirea profilului utilizatorului");
-				setIsProcessing((prev) => ({ ...prev, [userId]: false }));
-				return;
-			}
-
-			// 2. Ștergem toate anunțurile utilizatorului
-			const { error: listingsError } = await supabase
-				.from("listings")
-				.delete()
-				.eq("seller_id", profile.id);
-
-			if (listingsError) {
-				console.error("Error deleting user listings:", listingsError);
-				alert("Eroare la ștergerea anunțurilor utilizatorului");
-				setIsProcessing((prev) => ({ ...prev, [userId]: false }));
-				return;
-			}
-
-			// 3. Ștergem profilul utilizatorului
-			const { error: deleteProfileError } = await supabase
-				.from("profiles")
-				.delete()
-				.eq("user_id", userId);
-
-			if (deleteProfileError) {
-				console.error("Error deleting user profile:", deleteProfileError);
-				alert("Eroare la ștergerea profilului utilizatorului");
-				setIsProcessing((prev) => ({ ...prev, [userId]: false }));
+			if (error) {
+				console.error("Error deleting user:", error);
+				alert(`Eroare la ștergerea utilizatorului: ${error.message}`);
 				return;
 			}
 
@@ -323,8 +317,6 @@ const AdminPage = () => {
 	};
 
 	const filteredListings = listings.filter((listing) => {
-		console.log("STATUS:", listing.status); // 👈 AICI am adăugat linia
-
 		const matchesSearch =
 			!searchQuery ||
 			listing.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -346,6 +338,20 @@ const AdminPage = () => {
 			user.email?.toLowerCase().includes(searchQuery.toLowerCase())
 		);
 	});
+
+	// Network error handler
+	if (networkError) {
+		return (
+			<div className="min-h-screen bg-gray-50 py-8">
+				<div className="max-w-4xl mx-auto px-4">
+					<NetworkErrorHandler 
+						error={networkError} 
+						onRetry={checkAdminAndLoadData} 
+					/>
+				</div>
+			</div>
+		);
+	}
 
 	// Loading state
 	if (isLoading && !listings.length && !users.length) {
@@ -533,7 +539,6 @@ const AdminPage = () => {
 													<div className="flex items-center">
 														<div className="h-10 w-10 flex-shrink-0">
 															<img
-															loading="lazy"
 																className="h-10 w-10 rounded-md object-cover"
 																src={
 																	listing.images && listing.images[0]
@@ -808,7 +813,6 @@ const AdminPage = () => {
 														<div className="h-10 w-10 flex-shrink-0">
 															{user.avatar_url ? (
 																<img
-																loading="lazy"
 																	className="h-10 w-10 rounded-full object-cover"
 																	src={user.avatar_url}
 																	alt={user.name}

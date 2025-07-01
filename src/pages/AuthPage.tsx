@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
-import HomePage from "./HomePage";
 import {
 	Eye,
 	EyeOff,
@@ -12,9 +11,9 @@ import {
 	Building,
 	AlertTriangle,
 	CheckCircle,
-	ChevronDown,
 } from "lucide-react";
 import { auth, supabase, romanianCities } from "../lib/supabase";
+import NetworkErrorHandler from "../components/NetworkErrorHandler";
 
 const AuthPage = () => {
 	const [isLogin, setIsLogin] = useState(true);
@@ -24,6 +23,7 @@ const AuthPage = () => {
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState("");
 	const [successMessage, setSuccessMessage] = useState("");
+	const [networkError, setNetworkError] = useState<any>(null);
 	const navigate = useNavigate();
 	const location = useLocation();
 	const successMessageRef = useRef<HTMLDivElement>(null);
@@ -341,6 +341,7 @@ const AuthPage = () => {
 		setIsLoading(true);
 		setError("");
 		setSuccessMessage("");
+		setNetworkError(null);
 
 		try {
 			if (isLogin) {
@@ -353,6 +354,11 @@ const AuthPage = () => {
 
 				if (error) {
 					console.error("❌ Login error:", error);
+					
+					if (error.message?.includes('fetch') || error.message?.includes('network')) {
+						setNetworkError(error);
+						return;
+					}
 
 					const errorMessage = (error as { message: string }).message;
 
@@ -387,6 +393,11 @@ const AuthPage = () => {
 
 				if (error) {
 					console.error("❌ Registration error:", error);
+					
+					if (error.message?.includes('fetch') || error.message?.includes('network')) {
+						setNetworkError(error);
+						return;
+					}
 
 					const errorMessage = (error as { message: string }).message;
 
@@ -438,13 +449,17 @@ const AuthPage = () => {
 						// Redirecționăm către pagina principală după 2 secunde
 						setTimeout(() => {
 							navigate("/");
-						}, 288888000);
+						}, 2000);
 					}
 				}
 			}
 		} catch (err: any) {
 			console.error("💥 Authentication error:", err);
-			setError("A apărut o eroare neașteptată. Te rugăm să încerci din nou.");
+			if (err.message?.includes('fetch') || err.message?.includes('network')) {
+				setNetworkError(err);
+			} else {
+				setError("A apărut o eroare neașteptată. Te rugăm să încerci din nou.");
+			}
 		} finally {
 			setIsLoading(false);
 		}
@@ -458,11 +473,17 @@ const AuthPage = () => {
 		}
 
 		setIsLoading(true);
+		setNetworkError(null);
 
 		try {
 			const { error } = await auth.resetPassword(formData.email.trim());
 
 			if (error) {
+				console.error("Error sending reset password email:", error);
+				if (error.message?.includes('fetch') || error.message?.includes('network')) {
+					setNetworkError(error);
+					return;
+				}
 				const errorMessage = (error as { message: string }).message;
 				setError(errorMessage);
 			} else {
@@ -470,9 +491,13 @@ const AuthPage = () => {
 					"Un email pentru resetarea parolei a fost trimis. Verifică-ți căsuța de email.",
 				);
 			}
-		} catch (err) {
+		} catch (err: any) {
 			console.error("Password reset error:", err);
-			setError("A apărut o eroare. Te rugăm să încerci din nou.");
+			if (err.message?.includes('fetch') || err.message?.includes('network')) {
+				setNetworkError(err);
+			} else {
+				setError("A apărut o eroare. Te rugăm să încerci din nou.");
+			}
 		} finally {
 			setIsLoading(false);
 		}
@@ -492,12 +517,17 @@ const AuthPage = () => {
 		}
 
 		setIsLoading(true);
+		setNetworkError(null);
 
 		try {
 			const { error } = await auth.updatePassword(formData.password);
 
 			if (error) {
 				console.error("Error setting new password:", error);
+				if (error.message?.includes('fetch') || error.message?.includes('network')) {
+					setNetworkError(error);
+					return;
+				}
 				const errorMessage = (error as { message: string }).message;
 				setError(`Eroare la setarea noii parole: ${errorMessage}`);
 			} else {
@@ -516,15 +546,33 @@ const AuthPage = () => {
 					});
 				}, 3000);
 			}
-		} catch (err) {
+		} catch (err: any) {
 			console.error("Error setting new password:", err);
-			setError(
-				"A apărut o eroare la setarea noii parole. Te rugăm să încerci din nou.",
-			);
+			if (err.message?.includes('fetch') || err.message?.includes('network')) {
+				setNetworkError(err);
+			} else {
+				setError(
+					"A apărut o eroare la setarea noii parole. Te rugăm să încerci din nou.",
+				);
+			}
 		} finally {
 			setIsLoading(false);
 		}
 	};
+
+	// Network error handler
+	if (networkError) {
+		return (
+			<div className="min-h-screen bg-gray-50 py-8">
+				<div className="max-w-md mx-auto px-4">
+					<NetworkErrorHandler 
+						error={networkError} 
+						onRetry={() => window.location.reload()} 
+					/>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
@@ -534,7 +582,6 @@ const AuthPage = () => {
 					<div className="text-center mb-6 sm:mb-8">
 						<div className="flex items-center justify-center space-x-2 sm:space-x-3 mb-6">
 							<img
-								loading="lazy"
 								src="/Nexar - logo_black & red.png"
 								alt="Nexar Logo"
 								className="h-20 sm:h-24 md:h-28 w-auto"
