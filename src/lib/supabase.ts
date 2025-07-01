@@ -419,7 +419,12 @@ export const auth = {
 				email,
 				password,
 				options: {
-					data: userData,
+					data: {
+						name: userData.name,
+						phone: userData.phone,
+						location: userData.location,
+						sellerType: userData.sellerType
+					},
 					emailRedirectTo: `${window.location.origin}/auth/confirm`,
 				},
 			});

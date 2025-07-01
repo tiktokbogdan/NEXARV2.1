@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Filter, MapPin, Calendar, Gauge, ChevronLeft, ChevronRight, Settings, Fuel, User, X, SlidersHorizontal, Building, RefreshCw, Clock, Tag, Check } from 'lucide-react';
+import { Search, Filter, MapPin, Calendar, Gauge, ChevronLeft, ChevronRight, Settings, Fuel, User, X, SlidersHorizontal, Building, RefreshCw, Clock, Tag, CheckCircle } from 'lucide-react';
 import { listings, supabase } from '../lib/supabase';
 import NetworkErrorHandler from '../components/NetworkErrorHandler';
 
@@ -230,7 +230,7 @@ const HomePage = () => {
             <div className="mb-3">
               {listing.availability === "pe_stoc" ? (
                 <div className="inline-flex items-center space-x-2 bg-green-100 text-green-800 px-3 py-1 rounded-lg text-xs">
-                  <Check className="h-3 w-3" />
+                  <CheckCircle className="h-3 w-3" />
                   <span className="font-medium">Pe stoc</span>
                 </div>
               ) : (
