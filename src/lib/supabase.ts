@@ -39,6 +39,7 @@ export interface Listing {
 	created_at: string;
 	updated_at: string;
 	status: string;
+	availability?: string; // "pe_stoc" sau "la_comanda"
 }
 
 export interface User {
@@ -671,6 +672,8 @@ export const listings = {
 					query = query.lte("engine_capacity", filters.engineMax);
 				if (filters.mileageMax)
 					query = query.lte("mileage", filters.mileageMax);
+				if (filters.availability)
+					query = query.eq("availability", filters.availability);
 			}
 
 			const { data, error } = await query;
@@ -869,6 +872,7 @@ export const listings = {
 				views_count: 0,
 				favorites_count: 0,
 				featured: false,
+				availability: profile.seller_type === "dealer" ? listing.availability || "pe_stoc" : "pe_stoc",
 			};
 
 			console.log("📝 Creating listing with data:", {
@@ -908,7 +912,7 @@ export const listings = {
 			// 1. Obținem anunțul curent pentru a păstra imaginile existente
 			const { data: currentListing, error: fetchError } = await supabase
 				.from("listings")
-				.select("images, seller_id, seller_name, status")
+				.select("images, seller_id, seller_name, status, seller_type, availability")
 				.eq("id", id)
 				.single();
 
@@ -995,6 +999,7 @@ export const listings = {
 				images: updatedImages,
 				updated_at: new Date().toISOString(),
 				status: updates.status || "pending", // Setăm statusul la pending pentru a aștepta aprobarea modificărilor
+				availability: currentListing.seller_type === "dealer" ? updates.availability || currentListing.availability || "pe_stoc" : "pe_stoc",
 			};
 
 			console.log("📝 Updating listing with data:", {

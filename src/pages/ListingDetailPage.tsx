@@ -22,6 +22,8 @@ import {
 	Building,
 	AlertTriangle,
 	RefreshCw,
+	Clock,
+	Tag,
 } from "lucide-react";
 import { listings, supabase } from "../lib/supabase";
 
@@ -121,6 +123,7 @@ const ListingDetailPage = () => {
 				posted: formatDate(data.created_at),
 				views: data.views_count || 0,
 				featured: data.featured || false,
+				availability: data.availability || "pe_stoc",
 			};
 
 			setListing(formattedListing);
@@ -404,7 +407,7 @@ const ListingDetailPage = () => {
 									<div className="flex items-center space-x-3">
 										<Building className="h-6 w-6" />
 										<div>
-											<div className="font-bold text-lg">DEALER PREMIUM</div>
+											<div className="font-bold text-lg">DEALER VERIFICAT</div>
 											<button
 												onClick={handleSellerClick}
 												className="text-white underline hover:text-emerald-100 transition-colors text-sm"
@@ -414,6 +417,34 @@ const ListingDetailPage = () => {
 										</div>
 									</div>
 									<div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+								</div>
+							)}
+
+							{/* Disponibilitate pentru dealeri */}
+							{listing.seller.type === "dealer" && (
+								<div className="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center space-x-3">
+									<Tag className="h-5 w-5 text-blue-600" />
+									<div>
+										<h3 className="font-semibold text-blue-800">
+											Disponibilitate:
+										</h3>
+										<p className="text-blue-700">
+											{listing.availability === "pe_stoc"
+												? "Pe stoc"
+												: "La comandă"}
+										</p>
+									</div>
+									{listing.availability === "pe_stoc" ? (
+										<div className="ml-auto bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold flex items-center space-x-1">
+											<Check className="h-4 w-4" />
+											<span>Pe stoc</span>
+										</div>
+									) : (
+										<div className="ml-auto bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-semibold flex items-center space-x-1">
+											<Clock className="h-4 w-4" />
+											<span>La comandă</span>
+										</div>
+									)}
 								</div>
 							)}
 
@@ -564,7 +595,7 @@ const ListingDetailPage = () => {
 								<div className="mb-4 p-3 bg-emerald-100 text-emerald-800 rounded-lg flex items-center justify-between lg:hidden">
 									<div className="flex items-center space-x-2">
 										<Building className="h-5 w-5" />
-										<span className="font-bold">DEALER PREMIUM</span>
+										<span className="font-bold">DEALER VERIFICAT</span>
 									</div>
 									<div className="w-2 h-2 bg-emerald-600 rounded-full animate-pulse"></div>
 								</div>

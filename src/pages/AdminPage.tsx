@@ -18,6 +18,8 @@ import {
 	Search,
 	CheckCircle,
 	XCircle,
+	Clock,
+	Tag,
 } from "lucide-react";
 import { admin, supabase } from "../lib/supabase";
 import NetworkErrorHandler from "../components/NetworkErrorHandler";
@@ -82,7 +84,7 @@ const AdminPage = () => {
 			setIsLoading(true);
 			setError(null);
 			setNetworkError(null);
-
+			
 			// Folosim query direct pentru a obține TOATE anunțurile, inclusiv cele în așteptare
 			const { data, error } = await supabase
 				.from("listings")
@@ -103,9 +105,10 @@ const AdminPage = () => {
 				console.error("Error loading listings:", error);
 				if (error.message?.includes('fetch') || error.message?.includes('network')) {
 					setNetworkError(error);
-				} else {
-					setError("Nu s-au putut încărca anunțurile.");
+					return;
 				}
+				
+				setError("Nu s-au putut încărca anunțurile.");
 				return;
 			}
 
@@ -135,9 +138,9 @@ const AdminPage = () => {
 				console.error("Error loading users:", error);
 				if (error.message?.includes('fetch') || error.message?.includes('network')) {
 					setNetworkError(error);
-				} else {
-					setError("Nu s-au putut încărca utilizatorii.");
+					return;
 				}
+				setError("Nu s-au putut încărca utilizatorii.");
 				return;
 			}
 
@@ -316,6 +319,7 @@ const AdminPage = () => {
 		navigate(`/profil/${userId}`);
 	};
 
+	// Filtrare anunțuri
 	const filteredListings = listings.filter((listing) => {
 		const matchesSearch =
 			!searchQuery ||
@@ -572,7 +576,7 @@ const AdminPage = () => {
 														<div className="ml-2">
 															{listing.profiles?.seller_type === "dealer" ? (
 																<span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-																	Dealer
+																	Dealer Verificat
 																</span>
 															) : (
 																<span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
@@ -623,6 +627,23 @@ const AdminPage = () => {
 															<option value="sold">Vândut</option>
 														</select>
 													</div>
+													
+													{/* Disponibilitate pentru dealeri */}
+													{listing.seller_type === "dealer" && (
+														<div className="mt-2">
+															{listing.availability === "pe_stoc" ? (
+																<div className="inline-flex items-center space-x-1 bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-xs">
+																	<Check className="h-3 w-3" />
+																	<span>Pe stoc</span>
+																</div>
+															) : (
+																<div className="inline-flex items-center space-x-1 bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full text-xs">
+																	<Clock className="h-3 w-3" />
+																	<span>La comandă</span>
+																</div>
+															)}
+														</div>
+													)}
 												</td>
 												<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
 													€{listing.price.toLocaleString()}
@@ -857,7 +878,7 @@ const AdminPage = () => {
 														<div className="flex items-center">
 															<Building className="h-4 w-4 text-green-600 mr-1" />
 															<span className="text-sm text-green-800 font-medium">
-																Dealer
+																Dealer Verificat
 															</span>
 														</div>
 													) : (

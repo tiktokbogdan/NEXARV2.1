@@ -40,7 +40,8 @@ const EditListingPage = () => {
     features: [] as string[],
     phone: '',
     email: '',
-    status: ''
+    status: '',
+    availability: 'pe_stoc' // Valoare implicită: "pe_stoc" sau "la_comanda"
   });
 
   useEffect(() => {
@@ -131,7 +132,8 @@ const EditListingPage = () => {
         features: listingData.features || [],
         phone: '',
         email: '',
-        status: listingData.status || 'pending'
+        status: listingData.status || 'pending',
+        availability: listingData.availability || 'pe_stoc'
       });
 
     } catch (err: any) {
@@ -412,7 +414,9 @@ const EditListingPage = () => {
         features: formData.features,
         updated_at: new Date().toISOString(),
         // Dacă este admin, păstrăm statusul selectat, altfel setăm la pending
-        status: isAdmin ? formData.status : 'pending'
+        status: isAdmin ? formData.status : 'pending',
+        // Adăugăm disponibilitatea doar pentru dealeri
+        availability: originalListing.seller_type === "dealer" ? formData.availability : "pe_stoc"
       };
       
       // Actualizăm anunțul
@@ -487,6 +491,11 @@ const EditListingPage = () => {
       </div>
     );
   }
+
+  const availabilityOptions = [
+    { value: "pe_stoc", label: "Pe stoc" },
+    { value: "la_comanda", label: "La comandă" },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -835,6 +844,26 @@ const EditListingPage = () => {
                     </p>
                   )}
                 </div>
+
+                {/* Disponibilitate - doar pentru dealeri */}
+                {originalListing && originalListing.seller_type === "dealer" && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Disponibilitate *
+                    </label>
+                    <select
+                      value={formData.availability}
+                      onChange={(e) => handleInputChange('availability', e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-nexar-accent focus:border-transparent"
+                    >
+                      {availabilityOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* Status field - only for admin */}
                 {isAdmin && (

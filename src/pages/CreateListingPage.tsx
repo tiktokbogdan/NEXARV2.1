@@ -42,6 +42,7 @@ const CreateListingPage = () => {
 		features: [] as string[],
 		phone: "",
 		email: "",
+		availability: "pe_stoc", // Valoare implicită: "pe_stoc" sau "la_comanda"
 	});
 
 	// Check if user is logged in and load profile
@@ -164,6 +165,10 @@ const CreateListingPage = () => {
 		"Foarte bună",
 		"Bună",
 		"Satisfăcătoare",
+	];
+	const availabilityOptions = [
+		{ value: "pe_stoc", label: "Pe stoc" },
+		{ value: "la_comanda", label: "La comandă" },
 	];
 
 	const availableFeatures = [
@@ -448,6 +453,7 @@ const CreateListingPage = () => {
 				seller_name: userProfile.name || "Utilizator",
 				seller_type: userProfile.seller_type,
 				status: "pending", // Anunțul va fi în așteptare până la aprobarea de către admin
+				availability: userProfile.seller_type === "dealer" ? formData.availability : "pe_stoc",
 			};
 
 			console.log("📝 Mapped listing data:", listingData);
@@ -591,7 +597,7 @@ const CreateListingPage = () => {
 							</div>
 							<div className="text-xs text-gray-600">
 								{userProfile.seller_type === "dealer"
-									? "Dealer Autorizat"
+									? "Dealer Verificat"
 									: "Vânzător Privat"}
 							</div>
 						</div>
@@ -968,6 +974,28 @@ const CreateListingPage = () => {
 										</p>
 									)}
 								</div>
+
+								{/* Disponibilitate - doar pentru dealeri */}
+								{userProfile.seller_type === "dealer" && (
+									<div>
+										<label className="block text-sm font-medium text-gray-700 mb-2">
+											Disponibilitate *
+										</label>
+										<select
+											value={formData.availability}
+											onChange={(e) =>
+												handleInputChange("availability", e.target.value)
+											}
+											className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+										>
+											{availabilityOptions.map((option) => (
+												<option key={option.value} value={option.value}>
+													{option.label}
+												</option>
+											))}
+										</select>
+									</div>
+								)}
 							</div>
 						</div>
 					)}
@@ -1227,7 +1255,7 @@ const CreateListingPage = () => {
 										</span>
 										<span className="ml-2">
 											{userProfile.seller_type === "dealer"
-												? "Dealer Autorizat"
+												? "Dealer Verificat"
 												: "Vânzător Privat"}
 										</span>
 									</div>
@@ -1237,6 +1265,16 @@ const CreateListingPage = () => {
 										</span>
 										<span className="ml-2">{images.length}/5</span>
 									</div>
+									{userProfile.seller_type === "dealer" && (
+										<div>
+											<span className="text-green-700 font-medium">
+												Disponibilitate:
+											</span>
+											<span className="ml-2">
+												{formData.availability === "pe_stoc" ? "Pe stoc" : "La comandă"}
+											</span>
+										</div>
+									)}
 								</div>
 							</div>
 
