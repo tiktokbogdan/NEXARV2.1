@@ -874,7 +874,7 @@ const AdminPage = () => {
 													{user.email}
 												</td>
 												<td className="px-6 py-4 whitespace-nowrap">
-													{user.seller_type === "dealer" ? (
+													{user.seller_type === 'dealer' ? (
 														<div className="flex items-center">
 															<Building className="h-4 w-4 text-green-600 mr-1" />
 															<span className="text-sm text-green-800 font-medium">
